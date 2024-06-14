@@ -5,12 +5,15 @@
  */
 package View;
 
-import Connect.ConnectionDatabase;
 import Model.HoaDonNhap;
 import Model.HoaDonXuat;
 import Table.TableHDNhap;
 import Table.TableHDXuat;
-import java.sql.Connection;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,33 +31,20 @@ import javax.swing.table.DefaultTableModel;
  */
 public class QuanLyHoaDonXuat extends javax.swing.JFrame {
 
-    Connection conn = null;
-    ResultSet rs = null;
-    PreparedStatement pst = null;
-    DefaultTableModel hd = null;
-    ArrayList<HoaDonXuat> ds = new ArrayList<>();
+    private final String FILE_PATH = "HoaDonXuat.txt";
+    private ArrayList<HoaDonXuat> ds = new ArrayList<>();
     
     public void layHDX() {
-        String sql = "select * from HoaDonXuat";
-
-         Connection conn = new ConnectionDatabase().getConn();
-        Statement stm;
-        try {
-            stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while (rs.next()) {
-                String maHDX = rs.getString("maHDX");
-                String maSach = rs.getString("maSach");
-                String maNV = rs.getString("maNV");
-                String ngayXuat = rs.getString("ngayXuat");
-                int soLuongX = rs.getInt("soLuongX");
-                float donGiaX = rs.getFloat("donGiaX");
-                float thanhTienX = rs.getFloat("thanhTienX");
-                HoaDonXuat hd = new HoaDonXuat(maHDX, maSach, maNV, ngayXuat, soLuongX, donGiaX, thanhTienX);
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                // Assuming your HoaDonXuat class has a constructor that accepts these values
+                HoaDonXuat hd = new HoaDonXuat(parts[0], parts[1], parts[2], parts[3], Integer.parseInt(parts[4]), Float.parseFloat(parts[5]), Float.parseFloat(parts[6]));
                 ds.add(hd);
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyHoaDonXuat.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     public QuanLyHoaDonXuat() {
@@ -65,28 +55,28 @@ public class QuanLyHoaDonXuat extends javax.swing.JFrame {
      public void loadTable() {
         jtblHoaDonXuat.setModel(new TableHDXuat(ds));
     }
-      public List<String> layMaSach(){
+    public List<String> layMaSach(){
         List<String> danhSach = new ArrayList<>();
-        try{
-            Connection conn = new ConnectionDatabase().getConn();
-            String sql = "select maSach from Sach";
-            Statement stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while(rs.next()){
-                String maSach = rs.getString("maSach");
-                danhSach.add(maSach);
+        try (BufferedReader reader = new BufferedReader(new FileReader("Sach.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                danhSach.add(parts[0]); // Assuming the book ID is the first element in each line
             }
-                       
-            }catch(Exception e){
-                e.printStackTrace();
-               }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return danhSach;
     }
     public void xuatMaSach(){
-        List<String> maSach = layMaSach();
-        jcmbMaSach.removeAllItems();
-        for(String string: maSach){
-            jcmbMaSach.addItem(string);
+         try (BufferedReader reader = new BufferedReader(new FileReader("Sach.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                jcmbMaSach.addItem(parts[0]);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     /**
@@ -341,61 +331,80 @@ public class QuanLyHoaDonXuat extends javax.swing.JFrame {
     }//GEN-LAST:event_jtfDonGiaXActionPerformed
 
     private void jbtnThemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnThemActionPerformed
-         String sql = "Insert into  HoaDonXuat values (?,?,?,?,?,?,?)";
-        Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaHDX.getText());
-            pst.setString(2, (String) jcmbMaSach.getSelectedItem());
-            pst.setString(3, jtfMaNV.getText());
-            pst.setString(7, jtfNgayXuat.getText());
-            pst.setFloat(5, Float.valueOf(jtfDonGiaX.getText()));
-            pst.setInt(4, Integer.valueOf(jtfSoLuongX.getText()));
-            pst.setFloat(6, Float.valueOf(jtfThanhTien.getText()));
-            pst.executeUpdate();
+         try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+            String maHDX = jtfMaHDX.getText();
+            String maSach = (String) jcmbMaSach.getSelectedItem();
+            String maNV = jtfMaNV.getText();
+            String ngayXuat = jtfNgayXuat.getText();
+            float donGiaX = Float.parseFloat(jtfDonGiaX.getText());
+            int soLuongX = Integer.parseInt(jtfSoLuongX.getText());
+            float thanhTien = Float.parseFloat(jtfThanhTien.getText());
 
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Đã có mã hóa đơn hoặc mã nhân viên không tồn tại");
-        }catch(NumberFormatException e){
-            JOptionPane.showMessageDialog(null, "Nhập thiếu dữ liệu");
+            String newRecord = String.format("%s,%s,%s,%s,%d,%.2f,%.2f", maHDX, maSach, maNV, ngayXuat, soLuongX, donGiaX, thanhTien);
+            writer.write(newRecord);
+            writer.newLine();
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
         ds.clear();
         layHDX();
         loadTable();
     }//GEN-LAST:event_jbtnThemActionPerformed
 
     private void jbtnSuaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnSuaActionPerformed
-        String sql = "Update  HoaDonXuat set maSach=? ,maNV=? ,soLuongX=? ,donGiaX=?, thanhTienX=? , ngayXuat=? where maHDX=?";
-        Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(7, jtfMaHDX.getText());
-            pst.setString(1, (String) jcmbMaSach.getSelectedItem());
-            pst.setFloat(4, Float.valueOf(jtfDonGiaX.getText()));
-            pst.setString(2, jtfMaNV.getText());
-            pst.setInt(3, Integer.valueOf(jtfSoLuongX.getText()));
-            pst.setFloat(5, Float.valueOf(jtfThanhTien.getText()));
-            pst.setString(6, jtfNgayXuat.getText());
-            pst.executeUpdate();
+        String maHDX = jtfMaHDX.getText();
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith(maHDX)) {
+                    // Modify the line with the updated data
+                    String[] parts = line.split(",");
+                    parts[1] = (String) jcmbMaSach.getSelectedItem();
+                    parts[2] = jtfMaNV.getText();
+                    parts[3] = jtfNgayXuat.getText();
+                    parts[4] = jtfSoLuongX.getText();
+                    parts[5] = jtfDonGiaX.getText();
+                    parts[6] = jtfThanhTien.getText();
+                    line = String.join(",", parts);
+                }
+                sb.append(line).append("\n");
+            }
 
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyHoaDonXuat.class.getName()).log(Level.SEVERE, null, ex);
+            // Write the modified content back to the file
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
+                writer.write(sb.toString());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
         ds.clear();
         layHDX();
         loadTable();
     }//GEN-LAST:event_jbtnSuaActionPerformed
 
     private void jbtnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnXoaActionPerformed
-       String sql = "Delete  HoaDonXuat where maHDX=?";
-      Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaHDX.getText());
-            pst.executeUpdate();
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+        String maHDX = jtfMaHDX.getText();
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.startsWith(maHDX)) {
+                    sb.append(line).append("\n");
+                }
+            }
+
+            // Write the modified content back to the file
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
+                writer.write(sb.toString());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
         ds.clear();
         layHDX();
         loadTable();

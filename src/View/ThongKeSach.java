@@ -10,6 +10,13 @@ import Model.TaiKhoan;
 import Model.ThongKe;
 import Table.TableTaiKhoan;
 import Table.TableThongKe;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -19,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
@@ -28,43 +36,38 @@ import javax.swing.table.DefaultTableModel;
  */
 public class ThongKeSach extends javax.swing.JFrame {
 
-    Connection conn = null;
-    ResultSet rs = null;
-    PreparedStatement pst = null;
+    private final String FILE_PATH = "ThongKeSach.txt";
     DefaultTableModel hd = null;
     ArrayList<ThongKe> ds = new ArrayList<>();
 
     public void layThongKe() {
-        Statement stm;
-        try {
-            stm = (Statement) conn.createStatement();
-            while (rs.next()) {
-                String maTK = rs.getString("maThongKe");
-                String maSach = rs.getString("maSach");
-                String ngayTK = rs.getString("ngayThongKe");
-                int soLuongTon = rs.getInt("soLuongTon");
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String maTK = parts[0];
+                String maSach = parts[1];
+                String ngayTK = parts[2];
+                int soLuongTon = Integer.parseInt(parts[3]);
                 ThongKe tke = new ThongKe(maTK, maSach, ngayTK, soLuongTon);
                 ds.add(tke);
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(ThongKeSach.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Lỗi khi đọc dữ liệu từ tệp: " + e.getMessage());
         }
     }
 
     public List<String> layMaSach() {
-        List<String> danhSach = new ArrayList<>();
-        try {
-  
-            String sql = "select maSach from Sach";
-            Statement stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while (rs.next()) {
-                String maSach = rs.getString("maSach");
+         List<String> danhSach = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String maSach = parts[1]; // Giả sử mã sách nằm ở vị trí thứ 2 trong mỗi dòng của tệp
                 danhSach.add(maSach);
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Lỗi khi đọc dữ liệu từ tệp: " + e.getMessage());
         }
         return danhSach;
     }
@@ -289,56 +292,81 @@ public class ThongKeSach extends javax.swing.JFrame {
     }//GEN-LAST:event_jbtnQuayLaiActionPerformed
 
     private void jbtnThemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnThemActionPerformed
-        String sql = "Insert into  ThongKe values (?,?,?,?)";
-        Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaTK.getText());
-            pst.setString(3, jtfNgayTK.getText());
-            pst.setInt(4, Integer.valueOf(jtfSoLuongTon.getText()));
-            pst.setString(2, (String) jcmbMaSach.getSelectedItem());
-            pst.executeUpdate();
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Đã có mã thống kê, chọn mã khácy");
-        }
+         try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+        String maThongKe = jtfMaTK.getText();
+        String maSach = (String) jcmbMaSach.getSelectedItem();
+        String ngayThongKe = jtfNgayTK.getText();
+        int soLuongTon = Integer.parseInt(jtfSoLuongTon.getText());
+        
+        // Ghi dữ liệu vào tệp
+        writer.write(String.format("%s,%s,%s,%d", maThongKe, maSach, ngayThongKe, soLuongTon));
+        writer.newLine();
+        
+        JOptionPane.showMessageDialog(null, "Thêm dữ liệu thành công!");
+        
+        // Làm mới danh sách và bảng hiển thị
         ds.clear();
         layThongKe();
         loadTable();
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(null, "Lỗi khi thêm dữ liệu vào tệp: " + e.getMessage());
+    }
     }//GEN-LAST:event_jbtnThemActionPerformed
 
     private void jbtnSuaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnSuaActionPerformed
-        String sql = "Update ThongKe set ngayThongKe=? ,maSach=? ,soLuongTon=?  where maThongKe=?";
-        Connection conn = new ConnectionDatabase().getConn();
         try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(4, jtfMaTK.getText());
-            pst.setString(1, jtfNgayTK.getText());
-            pst.setInt(3, Integer.valueOf(jtfSoLuongTon.getText()));
-            pst.setString(2, (String) jcmbMaSach.getSelectedItem());
-            pst.executeUpdate();
-
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyNhanVien.class.getName()).log(Level.SEVERE, null, ex);
+        List<String> lines = Files.readAllLines(Paths.get(FILE_PATH));
+        String maThongKe = jtfMaTK.getText();
+        String maSach = (String) jcmbMaSach.getSelectedItem();
+        String ngayThongKe = jtfNgayTK.getText();
+        int soLuongTon = Integer.parseInt(jtfSoLuongTon.getText());
+        
+        // Tìm dòng chứa thông tin của mã thống kê cần sửa
+        for (int i = 0; i < lines.size(); i++) {
+            String[] parts = lines.get(i).split(",");
+            if (parts[0].equals(maThongKe)) {
+                parts[1] = maSach;
+                parts[2] = ngayThongKe;
+                parts[3] = Integer.toString(soLuongTon);
+                lines.set(i, String.join(",", parts));
+                break;
+            }
         }
+        
+        // Ghi lại dữ liệu vào tệp
+        Files.write(Paths.get(FILE_PATH), lines);
+        
+        JOptionPane.showMessageDialog(null, "Sửa dữ liệu thành công!");
+        
+        // Làm mới danh sách và bảng hiển thị
         ds.clear();
         layThongKe();
         loadTable();
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(null, "Lỗi khi sửa dữ liệu trong tệp: " + e.getMessage());
+    }
     }//GEN-LAST:event_jbtnSuaActionPerformed
 
     private void jbtnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnXoaActionPerformed
-        String sql = "Delete ThongKe where maThongKe=?";
-        Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaTK.getText());
-            pst.executeUpdate();
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLySach.class.getName()).log(Level.SEVERE, null, ex);
-        }
+         String maThongKe = jtfMaTK.getText();
+    try {
+        List<String> lines = Files.readAllLines(Paths.get(FILE_PATH));
+        
+        // Lọc ra các dòng không chứa mã thống kê cần xóa
+        lines = lines.stream().filter(line -> !line.startsWith(maThongKe)).collect(Collectors.toList());
+        
+        // Ghi lại dữ liệu vào tệp
+        Files.write(Paths.get(FILE_PATH), lines);
+        
+        JOptionPane.showMessageDialog(null, "Xóa dữ liệu thành công!");
+        
+        // Làm mới danh sách và bảng hiển thị
         ds.clear();
         layThongKe();
         loadTable();
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(null, "Lỗi khi xóa dữ liệu từ tệp: " + e.getMessage());
+    }
     }//GEN-LAST:event_jbtnXoaActionPerformed
 
     private void jbtnTimKiemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnTimKiemActionPerformed

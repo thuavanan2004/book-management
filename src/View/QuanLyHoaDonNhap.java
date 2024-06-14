@@ -10,6 +10,11 @@ import Model.HoaDonNhap;
 import Model.Sach;
 import Table.TableHDNhap;
 import Table.TableSach;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
@@ -28,72 +34,71 @@ import javax.swing.table.DefaultTableModel;
  * @author HP
  */
 public class QuanLyHoaDonNhap extends javax.swing.JFrame {
-
-    Connection conn = null;
-    ResultSet rs = null;
-    PreparedStatement pst = null;
+    private final String FILE_PATH = "HoaDonNhap.txt";
     DefaultTableModel hd = null;
     ArrayList<HoaDonNhap> ds = new ArrayList<>();
 
     /**
      * Creates new form QuanLyHoaDon
      */
-    public void layHDN() {
-        String sql = "select * from HoaDonNhap";
 
-        
-        Statement stm;
-        try {
-            stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while (rs.next()) {
-                String maHDN = rs.getString("maHDN");
-                String maSach = rs.getString("maSach");
-                String maNV = rs.getString("maNV");
-                String ngayNhap = rs.getString("ngayNhap");
-                int soLuongN = rs.getInt("soLuongN");
-                float donGiaN = rs.getFloat("donGiaN");
-                float thanhTienN = rs.getFloat("thanhTienN");
-                HoaDonNhap hd = new HoaDonNhap(maHDN, maSach, maNV, ngayNhap, soLuongN, donGiaN, thanhTienN);
-                ds.add(hd);
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(DangNhap.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-    public List<String> layMaSach(){
-        List<String> danhSach = new ArrayList<>();
-        try{
-            
-            String sql = "select maSach from Sach";
-            Statement stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while(rs.next()){
-                String maSach = rs.getString("maSach");
-                danhSach.add(maSach);
-            }
-                       
-            }catch(Exception e){
-                e.printStackTrace();
-               }
-        return danhSach;
-    }
-    public void xuatMaSach(){
-        List<String> maSach = layMaSach();
-        jcmbMaSach.removeAllItems();
-        for(String string: maSach){
-            jcmbMaSach.addItem(string);
-        }
-    }
     public QuanLyHoaDonNhap() {
         initComponents();
         layHDN();
         loadTable();
+        xuatMaSach();
+    }
+
+    public void layHDN() {
+        ds.clear();
+        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length == 7) {
+                    String maHDN = parts[0];
+                    String maSach = parts[1];
+                    String maNV = parts[2];
+                    String ngayNhap = parts[3];
+                    int soLuongN = Integer.parseInt(parts[4]);
+                    float donGiaN = Float.parseFloat(parts[5]);
+                    float thanhTienN = Float.parseFloat(parts[6]);
+                    HoaDonNhap hd = new HoaDonNhap(maHDN, maSach, maNV, ngayNhap, soLuongN, donGiaN, thanhTienN);
+                    ds.add(hd);
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public List<String> layMaSach() {
+        List<String> danhSach = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader("sach.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length > 0) {
+                    String maSach = parts[0];
+                    danhSach.add(maSach);
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return danhSach;
+    }
+
+    public void xuatMaSach() {
+        List<String> maSach = layMaSach();
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(maSach.toArray(new String[0]));
+        jcmbMaSach.setModel(model);
     }
 
     public void loadTable() {
         jtblHoaDonNhap.setModel(new TableHDNhap(ds));
     }
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -349,33 +354,33 @@ public class QuanLyHoaDonNhap extends javax.swing.JFrame {
         mn.setVisible(true);
         this.dispose();
     }//GEN-LAST:event_jbtnQuayLaiActionPerformed
-
-    private void jbtnThemHoaDonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnThemHoaDonActionPerformed
-        String sql = "Insert into  HoaDonNhap values (?,?,?,?,?,?,?)";
-        
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaHD.getText());
-            pst.setString(2, (String) jcmbMaSach.getSelectedItem());
-            pst.setString(3, jtfMaNV.getText());
-            pst.setString(7, jtfNgayLap.getText());
-            pst.setFloat(5, Float.valueOf(jtfDonGia.getText()));
-            pst.setInt(4, Integer.valueOf(jtfSoLuong.getText()));
-            pst.setFloat(6, Float.valueOf(jtfThanhTien.getText()));
-            pst.executeUpdate();
-
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Đã có mã hóa đơn hoặc nhân viên không tồn tại");
-        }catch(NumberFormatException e){
-            JOptionPane.showMessageDialog(null, "Nhập thiếu dữ liệu");
+     private void ghiHDN() {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH))) {
+            for (HoaDonNhap hd : ds) {
+                bw.write(hd.toString());
+                bw.newLine();
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
         }
-        ds.clear();
-        layHDN();
+    }
+    private void jbtnThemHoaDonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnThemHoaDonActionPerformed
+          String maHDN = jtfMaHD.getText();
+        String maSach = (String) jcmbMaSach.getSelectedItem();
+        String maNV = jtfMaNV.getText();
+        String ngayNhap = jtfNgayLap.getText();
+        int soLuongN = Integer.parseInt(jtfSoLuong.getText());
+        float donGiaN = Float.parseFloat(jtfDonGia.getText());
+        float thanhTienN = Float.parseFloat(jtfThanhTien.getText());
+
+        HoaDonNhap hd = new HoaDonNhap(maHDN, maSach, maNV, ngayNhap, soLuongN, donGiaN, thanhTienN);
+        ds.add(hd);
+        ghiHDN();
         loadTable();
     }//GEN-LAST:event_jbtnThemHoaDonActionPerformed
 
     private void jbtnTimHDActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnTimHDActionPerformed
-        ArrayList<HoaDonNhap> timKiem = new ArrayList<>();
+         ArrayList<HoaDonNhap> timKiem = new ArrayList<>();
         for (HoaDonNhap hd : ds) {
             if (jtfMaHD.getText().equals(hd.getMaHDN())) {
                 timKiem.add(hd);
@@ -396,39 +401,36 @@ public class QuanLyHoaDonNhap extends javax.swing.JFrame {
     }//GEN-LAST:event_jbtnTimHDActionPerformed
 
     private void jbtnSuaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnSuaActionPerformed
-        String sql = "Update  HoaDonNhap set maSach=? ,maNV=? ,soLuongN=? ,donGiaN=?, thanhTienN=? , ngayNhap=? where maHDN=?";
-         
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(7, jtfMaHD.getText());
-            pst.setString(1, (String) jcmbMaSach.getSelectedItem());
-            pst.setFloat(4, Float.valueOf(jtfDonGia.getText()));
-            pst.setString(2, jtfMaNV.getText());
-            pst.setInt(3, Integer.valueOf(jtfSoLuong.getText()));
-            pst.setFloat(5, Float.valueOf(jtfThanhTien.getText()));
-            pst.setString(6, jtfNgayLap.getText());
-            pst.executeUpdate();
-
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+        for (HoaDonNhap hd : ds) {
+            if (jtfMaHD.getText().equals(hd.getMaHDN())) {
+                try {
+                    hd.setMaSach((String) jcmbMaSach.getSelectedItem());
+                } catch (Exception ex) {
+                    Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                try {
+                    hd.setMaNV(jtfMaNV.getText());
+                } catch (Exception ex) {
+                    Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                hd.setNgayNhap(jtfNgayLap.getText());
+                try {
+                    hd.setSoLuongN(Integer.parseInt(jtfSoLuong.getText()));
+                } catch (Exception ex) {
+                    Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                hd.setDonGiaN(Float.parseFloat(jtfDonGia.getText()));
+                hd.setThanhTien(Float.parseFloat(jtfThanhTien.getText()));
+                break;
+            }
         }
-        ds.clear();
-        layHDN();
+        ghiHDN();
         loadTable();
     }//GEN-LAST:event_jbtnSuaActionPerformed
 
     private void jbtnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnXoaActionPerformed
-        String sql = "Delete  HoaDonNhap where maHDN=?";
-      
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaHD.getText());
-            pst.executeUpdate();
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyHoaDonNhap.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        ds.clear();
-        layHDN();
+        ds.removeIf(hd -> jtfMaHD.getText().equals(hd.getMaHDN()));
+        ghiHDN();
         loadTable();
     }//GEN-LAST:event_jbtnXoaActionPerformed
 

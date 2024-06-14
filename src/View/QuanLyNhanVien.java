@@ -5,11 +5,16 @@
  */
 package View;
 
-import Connect.ConnectionDatabase;
 import Model.Sach;
 import Model.TaiKhoan;
 import Table.TableSach;
 import Table.TableTaiKhoan;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -26,32 +31,27 @@ import javax.swing.table.DefaultTableModel;
  * @author HP
  */
 public class QuanLyNhanVien extends javax.swing.JFrame {
-
-    Connection conn = null;
-    ResultSet rs = null;
-    PreparedStatement pst = null;
+    private final String FILE_PATH = "NhanVien.txt";
     DefaultTableModel hd = null;
     ArrayList<TaiKhoan> ds = new ArrayList<>();
 
     public void layTaiKhoan() {
-        String sql = "select * from NhanVien";
-
-        Connection conn = new ConnectionDatabase().getConn();
-        Statement stm;
-        try {
-            stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while (rs.next()) {
-                String maNV = rs.getString("maNV");
-                String tenNV = rs.getString("tenNV");
-                String diaChi = rs.getString("diaChi");
-                String sdt = rs.getString("sdt");
-                String email = rs.getString("email");
+        ds.clear();
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String maNV = parts[0];
+                String tenNV = parts[1];
+                String diaChi = parts[2];
+                String sdt = parts[3];
+                String email = parts[4];
                 TaiKhoan tk = new TaiKhoan(maNV, tenNV, diaChi, sdt, email);
                 ds.add(tk);
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyNhanVien.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -285,73 +285,118 @@ public class QuanLyNhanVien extends javax.swing.JFrame {
     }//GEN-LAST:event_jbtnQuayLaiActionPerformed
 
     private void jbtnThemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnThemActionPerformed
-        String sql = "Insert into  NhanVien values (?,?,?,?,?)";
-       Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaNV.getText());
-            pst.setString(2, jtfTenNV.getText());
-            pst.setString(3, jtfDiaChi.getText());
-            pst.setString(4, jtfSDT.getText());
-            pst.setString(5, jtfEmail.getText());
-            pst.executeUpdate();
+        String maNV = jtfMaNV.getText();
+        String tenNV = jtfTenNV.getText();
+        String diaChi = jtfDiaChi.getText();
+        String sdt = jtfSDT.getText();
+        String email = jtfEmail.getText();
 
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Đã có mã nhân viên, chọn mã nhân viên khác");
+        String newRecord = maNV + "," + tenNV + "," + diaChi + "," + sdt + "," + email;
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+            writer.write(newRecord);
+            writer.newLine();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
+
+        // Clear and reload the data
         ds.clear();
         layTaiKhoan();
         loadTable();
     }//GEN-LAST:event_jbtnThemActionPerformed
 
     private void jbtnSuaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnSuaActionPerformed
-       String sql = "Update  NhanVien set tenNV=? ,diaChi=? ,sdt=? ,email=? where maNV=?";
-         Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfTenNV.getText());
-            pst.setString(2, jtfDiaChi.getText());
-            pst.setString(3, jtfSDT.getText());
-            pst.setString(4, jtfEmail.getText());
-            pst.setString(5, jtfMaNV.getText());         
-            pst.executeUpdate();
-            
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyNhanVien.class.getName()).log(Level.SEVERE, null, ex);
+         String maNV = jtfMaNV.getText();
+        String tenNV = jtfTenNV.getText();
+        String diaChi = jtfDiaChi.getText();
+        String sdt = jtfSDT.getText();
+        String email = jtfEmail.getText();
+
+    // Construct the updated record
+    String updatedRecord = maNV + "," + tenNV + "," + diaChi + "," + sdt + "," + email;
+
+    try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH));
+         BufferedWriter writer = new BufferedWriter(new FileWriter("temp.txt"))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split(",");
+            if (parts[0].equals(maNV)) {
+                // Write the updated record to the temporary file
+                writer.write(updatedRecord);
+            } else {
+                // Write the existing record as is
+                writer.write(line);
+            }
+            writer.newLine();
         }
-        ds.clear();
-        layTaiKhoan();
-        loadTable();
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Rename the temporary file to the original file
+    File tempFile = new File("temp.txt");
+    File originalFile = new File(FILE_PATH);
+    tempFile.renameTo(originalFile);
+
+    // Clear and reload the data
+    ds.clear();
+    layTaiKhoan();
+    loadTable();
     }//GEN-LAST:event_jbtnSuaActionPerformed
 
     private void jbtnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnXoaActionPerformed
-        String sql = "Delete  NhanVien where maNV=?";
-        Connection conn = new ConnectionDatabase().getConn();
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaNV.getText());
-            pst.executeUpdate();           
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLyNhanVien.class.getName()).log(Level.SEVERE, null, ex);
+        String maNV = jtfMaNV.getText();
+
+    try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH));
+         BufferedWriter writer = new BufferedWriter(new FileWriter("temp.txt"))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (!line.startsWith(maNV)) {
+                // Write the existing record except the one to be deleted
+                writer.write(line);
+                writer.newLine();
+            }
         }
-        ds.clear();
-        layTaiKhoan();
-        loadTable();
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Rename the temporary file to the original file
+    File tempFile = new File("temp.txt");
+    File originalFile = new File(FILE_PATH);
+    tempFile.renameTo(originalFile);
+
+    // Clear and reload the data
+    ds.clear();
+    layTaiKhoan();
+    loadTable();
     }//GEN-LAST:event_jbtnXoaActionPerformed
 
     private void jbtnTimKiemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnTimKiemActionPerformed
-        ArrayList<TaiKhoan> timKiem = new ArrayList<>();
-        for(TaiKhoan s : ds){
-            if(jtfMaNV.getText().equals(s.getMaNV())){
-                timKiem.add(s);
-                jtfEmail.setText(s.getEmail());
-                jtfDiaChi.setText(s.getDiaChi());
-                jtfSDT.setText(s.getSdt());
-                jtfTenNV.setText(s.getTenNV());
-                
+        String searchKeyword = jtfMaNV.getText();
+    ArrayList<TaiKhoan> searchResults = new ArrayList<>();
+
+    try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split(",");
+            if (parts[0].equals(searchKeyword)) {
+                String maNV = parts[0];
+                String tenNV = parts[1];
+                String diaChi = parts[2];
+                String sdt = parts[3];
+                String email = parts[4];
+                TaiKhoan tk = new TaiKhoan(maNV, tenNV, diaChi, sdt, email);
+                searchResults.add(tk);
             }
         }
-        jtblTaiKhoan.setModel(new TableTaiKhoan(timKiem));
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Update the table with search results
+    jtblTaiKhoan.setModel(new TableTaiKhoan(searchResults));
     }//GEN-LAST:event_jbtnTimKiemActionPerformed
 
     /**

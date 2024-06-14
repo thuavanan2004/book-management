@@ -8,6 +8,12 @@ package View;
 import Model.Sach;
 import Table.TableHDNhap;
 import Table.TableSach;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,9 +31,7 @@ import javax.swing.table.DefaultTableModel;
  */
 public class QuanLySach extends javax.swing.JFrame {
 
-    Connection conn = null;
-    ResultSet rs = null;
-    PreparedStatement pst = null;
+    private final String FILE_PATH = "Sach.txt";
     DefaultTableModel hd = null;
     ArrayList<Sach> ds = new ArrayList<>();
 
@@ -35,24 +39,21 @@ public class QuanLySach extends javax.swing.JFrame {
      * Creates new form QuanLyHoaDon
      */
     public void laySach() {
-        String sql = "select * from Sach";
-
-        Statement stm;
-        try {
-            stm = (Statement) conn.createStatement();
-            ResultSet rs = stm.executeQuery(sql);
-            while (rs.next()) {
-                String maSach = rs.getString("maSach");
-                String tenSach = rs.getString("tenSach");
-                String nhaXB = rs.getString("nhaXuatBan");
-                String theLoai = rs.getString("theLoai");
-                int soTrang = rs.getInt("soTrang");
-                String dotuoi = rs.getString("doTuoi");
+         try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String maSach = parts[0];
+                String tenSach = parts[1];
+                String nhaXB = parts[2];
+                String theLoai = parts[3];
+                int soTrang = Integer.parseInt(parts[4]);
+                String dotuoi = parts[5];
                 Sach sach = new Sach(maSach, tenSach, nhaXB, theLoai, soTrang, dotuoi);
                 ds.add(sach);
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLySach.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -308,93 +309,166 @@ public class QuanLySach extends javax.swing.JFrame {
     }//GEN-LAST:event_jbtnQuayLaiActionPerformed
 
     private void jbtnThemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnThemActionPerformed
-        String sql = "Insert into  Sach values (?,?,?,?,?,?)";
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaSach.getText());
-            pst.setString(2, jtfTenSach.getText());
-            pst.setString(4, (String) jcmbTheLoai.getSelectedItem());
-            pst.setString(3, (String) jcmbNhaXuatBan.getSelectedItem());
-            pst.setInt(5, Integer.valueOf(jtfSoTrang.getText()));
-            pst.setString(6, (String) jcmbDoTuoi.getSelectedItem());
-            pst.executeUpdate();
+        String maSach = jtfMaSach.getText();
+        String tenSach = jtfTenSach.getText();
+        String nhaXB = (String) jcmbNhaXuatBan.getSelectedItem();
+        String theLoai = (String) jcmbTheLoai.getSelectedItem();
+        int soTrang = Integer.parseInt(jtfSoTrang.getText());
+        String dotuoi = (String) jcmbDoTuoi.getSelectedItem();
 
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Đã có mã sách,nhập mã khác");
-        }catch(NumberFormatException e){
-            JOptionPane.showMessageDialog(null, "Nhập thiếu dữ liệu");
+        String newRecord = maSach + "," + tenSach + "," + nhaXB + "," + theLoai + "," + soTrang + "," + dotuoi;
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+            writer.write(newRecord);
+            writer.newLine();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
+
+        // Clear and reload the data
         ds.clear();
         laySach();
         loadTable();
     }//GEN-LAST:event_jbtnThemActionPerformed
 
     private void jbtnSuaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnSuaActionPerformed
-        String sql = "Update  Sach set tenSach=? ,nhaXuatBan=? ,theLoai=? ,soTrang=?, doTuoi=? where maSach=?";
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfTenSach.getText());
-            pst.setString(6, jtfMaSach.getText());
-            pst.setString(3, (String) jcmbTheLoai.getSelectedItem());
-            pst.setString(2, (String) jcmbNhaXuatBan.getSelectedItem());
-            pst.setInt(4, Integer.valueOf(jtfSoTrang.getText()));
-            pst.setString(5, (String) jcmbDoTuoi.getSelectedItem());
-            pst.executeUpdate();
-
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLySach.class.getName()).log(Level.SEVERE, null, ex);
+        // Đọc dữ liệu từ file và lưu vào danh sách
+    ArrayList<String> lines = new ArrayList<>();
+    try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            lines.add(line);
         }
-        ds.clear();
-        laySach();
-        loadTable();
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Tìm và cập nhật thông tin của đối tượng cần sửa trong danh sách
+    for (int i = 0; i < lines.size(); i++) {
+        String[] parts = lines.get(i).split(",");
+        String maSach = parts[0];
+        if (maSach.equals(jtfMaSach.getText())) {
+            // Cập nhật thông tin của đối tượng tương ứng
+            String updatedRecord = jtfMaSach.getText() + "," + jtfTenSach.getText() + "," +
+                                   (String) jcmbNhaXuatBan.getSelectedItem() + "," +
+                                   (String) jcmbTheLoai.getSelectedItem() + "," +
+                                   jtfSoTrang.getText() + "," +
+                                   (String) jcmbDoTuoi.getSelectedItem();
+            lines.set(i, updatedRecord);
+            break; // Kết thúc vòng lặp sau khi tìm và cập nhật thông tin
+        }
+    }
+
+    // Ghi lại dữ liệu đã cập nhật vào file
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
+        for (String line : lines) {
+            writer.write(line);
+            writer.newLine();
+        }
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Xóa và tải lại dữ liệu
+    ds.clear();
+    laySach();
+    loadTable();
     }//GEN-LAST:event_jbtnSuaActionPerformed
 
     private void jbtnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnXoaActionPerformed
-        String sql = "Delete  Sach where maSach=?";
-        try {
-            pst = conn.prepareStatement(sql);
-            pst.setString(1, jtfMaSach.getText());
-            pst.executeUpdate();
-        } catch (SQLException ex) {
-            Logger.getLogger(QuanLySach.class.getName()).log(Level.SEVERE, null, ex);
+         String maSach = jtfMaSach.getText();
+
+  try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH));
+         BufferedWriter writer = new BufferedWriter(new FileWriter("temp.txt"))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (!line.startsWith(maSach)) {
+                // Write the existing record except the one to be deleted
+                writer.write(line);
+                writer.newLine();
+            }
         }
-        ds.clear();
-        laySach();
-        loadTable();
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Rename the temporary file to the original file
+    File tempFile = new File("temp.txt");
+    File originalFile = new File(FILE_PATH);
+    tempFile.renameTo(originalFile);
+
+    // Clear and reload the data
+    ds.clear();
+    laySach();
+    loadTable();
     }//GEN-LAST:event_jbtnXoaActionPerformed
 
     private void jbtnTmKiemMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jbtnTmKiemMouseClicked
-        // TODO add your handling code here:
-        ArrayList<Sach> timKiem = new ArrayList<>();
-        for (Sach s : ds) {
-            if (jtfMaSach.getText().equals(s.getMaSach())) {
-                timKiem.add(s);
-                jtfSoTrang.setText(String.valueOf(s.getSoTrang()));
-                jtfTenSach.setText(s.getTenSach());
-                for (int i = 0; i < jcmbNhaXuatBan.getItemCount(); i++) {
-                    if (jcmbNhaXuatBan.getItemAt(i).toString().equals(s.getNhaXB())) {
-                        System.out.println(s.getNhaXB());
-                        jcmbNhaXuatBan.setSelectedIndex(i);
-                        break;
-                    }
-                }
-                for (int i = 0; i < jcmbDoTuoi.getItemCount(); i++) {
-                    if (jcmbDoTuoi.getItemAt(i).toString().equals(s.getDoTuoi())) {
-                        System.out.println(s.getNhaXB());
-                        jcmbDoTuoi.setSelectedIndex(i);
-                        break;
-                    }
-                }
-                for (int i = 0; i < jcmbTheLoai.getItemCount(); i++) {
-                    if (jcmbTheLoai.getItemAt(i).toString().equals(s.getTheLoai())) {
-                        System.out.println(s.getNhaXB());
-                        jcmbTheLoai.setSelectedIndex(i);
-                        break;
-                    }
-                }
+        // Get the maSach entered by the user
+    String maSachToSearch = jtfMaSach.getText();
+
+    // Clear the previous search results
+    ArrayList<Sach> searchResults = new ArrayList<>();
+
+    // Search for matching records in the file
+    try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split(",");
+            String maSach = parts[0];
+            if (maSach.equals(maSachToSearch)) {
+                String tenSach = parts[1];
+                String nhaXB = parts[2];
+                String theLoai = parts[3];
+                int soTrang = Integer.parseInt(parts[4]);
+                String dotuoi = parts[5];
+                Sach sach = new Sach(maSach, tenSach, nhaXB, theLoai, soTrang, dotuoi);
+                searchResults.add(sach);
+                break; // Since maSach is unique, we can break after finding the first match
             }
-            jtblSach.setModel(new TableSach(timKiem));
         }
+    } catch (IOException ex) {
+        ex.printStackTrace();
+    }
+
+    // Update the UI with the search results
+    if (!searchResults.isEmpty()) {
+        Sach sach = searchResults.get(0);
+        jtfTenSach.setText(sach.getTenSach());
+        jtfSoTrang.setText(String.valueOf(sach.getSoTrang()));
+
+        for (int i = 0; i < jcmbNhaXuatBan.getItemCount(); i++) {
+            if (jcmbNhaXuatBan.getItemAt(i).equals(sach.getNhaXB())) {
+                jcmbNhaXuatBan.setSelectedIndex(i);
+                break;
+            }
+        }
+
+        for (int i = 0; i < jcmbDoTuoi.getItemCount(); i++) {
+            if (jcmbDoTuoi.getItemAt(i).equals(sach.getDoTuoi())) {
+                jcmbDoTuoi.setSelectedIndex(i);
+                break;
+            }
+        }
+
+        for (int i = 0; i < jcmbTheLoai.getItemCount(); i++) {
+            if (jcmbTheLoai.getItemAt(i).equals(sach.getTheLoai())) {
+                jcmbTheLoai.setSelectedIndex(i);
+                break;
+            }
+        }
+
+        // Update the table with the search results
+        jtblSach.setModel(new TableSach(searchResults));
+    } else {
+        // Clear the UI if no matching record is found
+        jtfTenSach.setText("");
+        jtfSoTrang.setText("");
+        jcmbNhaXuatBan.setSelectedIndex(0);
+        jcmbDoTuoi.setSelectedIndex(0);
+        jcmbTheLoai.setSelectedIndex(0);
+        jtblSach.setModel(new DefaultTableModel()); // Clear the table
+    }
     }//GEN-LAST:event_jbtnTmKiemMouseClicked
 
     private void jcmbNhaXuatBanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jcmbNhaXuatBanActionPerformed

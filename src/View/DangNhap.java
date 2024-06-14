@@ -8,6 +8,12 @@ package View;
 import Model.DangNhapTK;
 import Model.TaiKhoan;
 import static java.awt.image.ImageObserver.WIDTH;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -145,35 +151,49 @@ public class DangNhap extends javax.swing.JFrame {
     private void jbtnHuyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnHuyActionPerformed
         System.exit(0);
     }//GEN-LAST:event_jbtnHuyActionPerformed
-
+   
     private void jbtnDangNhapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnDangNhapActionPerformed
-        String sql = "select * from TaiKhoan";
+        FileInitializer.initializeFile("taikhoan.txt");
         ArrayList<DangNhapTK> ds = new ArrayList<>();
-        Statement stm;
-        try {
-          
-            while (rs.next()) {
-                DangNhapTK dn = new DangNhapTK(rs.getString("tenTK"), rs.getString("matKhau")   );
+        BufferedReader br = null;
+
+    try {
+        br = new BufferedReader(new FileReader("taikhoan.txt"));
+        String line;
+        while ((line = br.readLine()) != null) {
+            String[] parts = line.split(",");
+            if (parts.length == 2) {
+                DangNhapTK dn = new DangNhapTK(parts[0], parts[1]);
                 ds.add(dn);
             }
-        } catch (SQLException ex) {
+        }
+    } catch (IOException ex) {
+        Logger.getLogger(DangNhap.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        try {
+            if (br != null) {
+                br.close();
+            }
+        } catch (IOException ex) {
             Logger.getLogger(DangNhap.class.getName()).log(Level.SEVERE, null, ex);
         }
-        boolean check = false;
-        String pwd = new String(jpsfMatKhau.getPassword());
-        for (DangNhapTK tk : ds) {
-            if (tk.getTenDangNhap().equals(jtfTenTaiKhoan.getText()) && tk.getMatKhau().equals(pwd)) {
-                check = true;
+    }
 
-            }
+    boolean check = false;
+    String pwd = new String(jpsfMatKhau.getPassword());
+    for (DangNhapTK tk : ds) {
+        if (tk.getTenDangNhap().equals(jtfTenTaiKhoan.getText()) && tk.getMatKhau().equals(pwd)) {
+            check = true;
         }
-        if (check) {
-            Menu mn = new Menu();
-            mn.setVisible(true);
-            this.dispose();
-        } else {
-            JOptionPane.showConfirmDialog(null, "Tài khoản hoặc mật khẩu không chính xác!", "Thông báo", WIDTH);
-        }
+    }
+
+    if (check) {
+        Menu mn = new Menu();
+        mn.setVisible(true);
+        this.dispose();
+    } else {
+        JOptionPane.showConfirmDialog(null, "Tài khoản hoặc mật khẩu không chính xác!", "Thông báo", JOptionPane.DEFAULT_OPTION);
+    }
     }//GEN-LAST:event_jbtnDangNhapActionPerformed
 
     private void jpsfMatKhauActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jpsfMatKhauActionPerformed
@@ -228,4 +248,19 @@ public class DangNhap extends javax.swing.JFrame {
     private javax.swing.JPasswordField jpsfMatKhau;
     private javax.swing.JTextField jtfTenTaiKhoan;
     // End of variables declaration//GEN-END:variables
+ public class FileInitializer {
+
+    public static void initializeFile(String fileName) {
+        File file = new File(fileName);
+        if (!file.exists() || file.length() == 0) {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
+                writer.write("an123,an123\n");
+                writer.write("tenTK2,matKhau2\n");
+                writer.write("tenTK3,matKhau3\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
 }

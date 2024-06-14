@@ -4,12 +4,18 @@
  */
 package Test;
 
+import View.DangNhap;
+
 /**
  *
  * @author Admin
  */
 public class Test {
     public static void main(String[] args) {
-        
+         java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new DangNhap().setVisible(true);
+            }
+        });
     }
 }
